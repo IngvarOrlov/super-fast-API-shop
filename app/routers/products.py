@@ -130,11 +130,15 @@ async def update_product(
 
 
 @router.delete('/')
-async def delete_product(product_id: int, session: Annotated[AsyncSession, Depends(get_db)]):
+async def delete_product(product_id: int,
+                         session: Annotated[AsyncSession, Depends(get_db)],
+                         user: Annotated[User, Depends(get_supplier_or_admin_user)]):
     query = select(Product).where(Product.id == product_id, Product.is_active == True)
     product = await session.scalar(query)
     if not product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
+    if user.get('is_supplier') and product.user_id != user.get('id'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to use this method")
     query = update(Product).where(Product.id == product_id).values(is_active=False)
     await session.execute(query)
     await session.commit()

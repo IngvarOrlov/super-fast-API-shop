@@ -1,14 +1,15 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Body
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
-from sqlalchemy import insert, select, update
+
+from fastapi import APIRouter, Depends, status, HTTPException
 from slugify import slugify
+from sqlalchemy import insert, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.backend.db_depends import get_db
-from app.schemas import CreateCategory
+from app.models import User
 from app.models.category import Category
-from app.models.products import Product
+from app.routers.auth import get_admin_user
+from app.schemas import CreateCategory
 
 router = APIRouter(
     prefix='/categories',
@@ -29,6 +30,7 @@ async def get_all_categories(
 async def create_category(
         session: Annotated[AsyncSession, Depends(get_db)],
         new_category: CreateCategory,
+        _: Annotated[User, Depends(get_admin_user)]
 ):
     if new_category.parent_id is not None:
         parent = await session.scalar(select(Category).where(Category.id == new_category.parent_id))
@@ -56,7 +58,8 @@ async def create_category(
 async def update_category(
         session: Annotated[AsyncSession, Depends(get_db)],
         category_slug: str,
-        update_category: CreateCategory
+        update_category: CreateCategory,
+        _: Annotated[User, Depends(get_admin_user)]
 ):
     query = select(Category).where(Category.slug == category_slug)
     category = await session.scalar(query)
@@ -74,7 +77,8 @@ async def update_category(
 @router.delete('/')
 async def delete_category(
         session: Annotated[AsyncSession, Depends(get_db)],
-        category_slug: str):
+        category_slug: str,
+        _: Annotated[User, Depends(get_admin_user)]):
     query = select(Category).where(Category.slug == category_slug, Category.is_active == True)
     category = await session.scalars(query)
     category = category.one_or_none()

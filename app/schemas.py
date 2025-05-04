@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 
 
 class CreateProduct(BaseModel):
@@ -34,3 +34,9 @@ class CreateCategory(BaseModel):
     name: str
     parent_id: int | None = None
 
+class CreateUser(BaseModel):
+    first_name: str
+    last_name: str
+    username: str
+    email: EmailStr
+    password: str

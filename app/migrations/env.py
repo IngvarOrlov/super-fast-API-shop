@@ -1,11 +1,11 @@
 import asyncio
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
 from app.backend.db import DB_URL
 
 # this is the Alembic Config object, which provides
@@ -24,7 +24,7 @@ config.set_main_option("sqlalchemy.url", DB_URL)
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 from app.models.base import Base
-from app.models import category, products
+
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

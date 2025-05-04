@@ -1,13 +1,15 @@
-from fastapi import APIRouter, status, Depends, HTTPException
-from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.asyncio import AsyncSession
-from slugify import slugify
-from app.models import Product, Category
-from app.schemas import CreateProduct
-from app.backend.db_depends import get_db
-from sqlalchemy import select, update, insert, delete
 from typing import Annotated
+
+from fastapi import APIRouter, status, Depends, HTTPException
+from slugify import slugify
+from sqlalchemy import select, update, insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.backend.db_depends import get_db
+from app.models import Product, Category, User
+from app.routers.auth import get_supplier_or_admin_user
+from app.schemas import CreateProduct
+
 router = APIRouter(prefix='/products', tags=['products'])
 
 @router.get('/')
@@ -28,7 +30,8 @@ async def all_products(
 @router.post('/')
 async def create_product(
         session: Annotated[AsyncSession, Depends(get_db)],
-        product: CreateProduct
+        product: CreateProduct,
+        user: Annotated[User, Depends(get_supplier_or_admin_user)]
 ):
     category = await session.scalar(select(Category).where(Category.id == product.category))
     if not category:
@@ -61,7 +64,8 @@ async def create_product(
         image_url=product.image_url,
         stock=product.stock,
         rating=0.0,
-        is_active=True
+        is_active=True,
+        user_id=user.get('id')
         )
     await session.execute(query)
     await session.commit()
@@ -98,11 +102,17 @@ async def product_detail(product_slug: str, session: Annotated[AsyncSession, Dep
 
 
 @router.put('/{product_slug}')
-async def update_product(product_slug: str, session: Annotated[AsyncSession, Depends(get_db)], product: CreateProduct):
+async def update_product(
+        product_slug: str,
+        session: Annotated[AsyncSession, Depends(get_db)],
+        product: CreateProduct,
+        user: Annotated[User, Depends(get_supplier_or_admin_user)]):
     query = select(Product).where(Product.slug == product_slug, Product.is_active == True)
     old_product = await session.scalar(query)
     if not old_product:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="There is no product found")
+    if user.get('is_supplier') and old_product.user_id != user.get('id'):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized to use this method")
     query = update(Product).where(Product.slug == product_slug).values(
         category_id=product.category,
         name=product.name,
@@ -110,10 +120,7 @@ async def update_product(product_slug: str, session: Annotated[AsyncSession, Dep
         description=product.description,
         price=product.price,
         image_url=product.image_url,
-        stock=product.stock,
-        rating=old_product.rating,
-        is_active=old_product.is_active
-
+        stock=product.stock
     )
     await session.execute(query)
     await session.commit()

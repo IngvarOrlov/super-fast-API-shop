@@ -138,12 +138,20 @@ async def get_supplier_or_admin_user(user: Annotated[dict, Depends(get_current_u
             detail='You must be admin or supplier user for this')
     return user
 
+async def get_customer_user(user: Annotated[dict, Depends(get_current_user)]):
+    if not user.get('is_customer'):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail='You must be customer user for this'
+        )
+    return user
+
 
 @router.post('/token')
 async def login(db: Annotated[AsyncSession, Depends(get_db)], form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     user = await authenticate_user(db, form_data.username, form_data.password)
     token = await create_access_token(user.username, user.id, user.is_admin, user.is_supplier, user.is_customer,
-                                      expires_delta=timedelta(minutes=5))
+                                      expires_delta=timedelta(minutes=30))
     return {
         'access_token': token,
         'token_type': 'bearer'

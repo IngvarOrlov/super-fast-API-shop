@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 
 class CreateProduct(BaseModel):
@@ -40,3 +40,14 @@ class CreateUser(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+class CreateReview(BaseModel):
+    comment: str
+    grade: int
+    product_id: int
+
+    @field_validator('grade')
+    def validate_grade(cls, v):
+        if v < 0 or v > 5:
+            raise ValueError('Grade must be between 0 and 5')
+        return v

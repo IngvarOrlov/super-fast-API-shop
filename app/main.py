@@ -3,19 +3,16 @@ from fastapi import FastAPI
 from app.routers import category, products, auth, permission, review
 
 app = FastAPI()
+app_v1 = FastAPI(title='API v1')
 
 
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
 
-
-@app.get("/hello/{name}")
-async def say_hello(name: str):
-    return {"message": f"Hello {name}"}
-
-app.include_router(category.router)
-app.include_router(products.router)
-app.include_router(auth.router)
-app.include_router(permission.router)
-app.include_router(review.router)
+app_v1.include_router(category.router)
+app_v1.include_router(products.router)
+app_v1.include_router(auth.router)
+app_v1.include_router(permission.router)
+app_v1.include_router(review.router)
+app.mount(path='/v1', app=app_v1)
